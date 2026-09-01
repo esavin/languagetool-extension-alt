@@ -1,0 +1,16 @@
+# Сборочные артефакты (tools/pack.sh)
+dist/
+
+# Системные файлы
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Редакторы и IDE
+.idea/
+.vscode/
+*.swp
+*~
+
+# Логи
+*.log

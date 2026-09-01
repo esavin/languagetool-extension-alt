@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <title>VD LanguageTool Checker — тестовая страница</title>
+  <style>
+    body { font: 14px/1.6 Arial, sans-serif; max-width: 760px; margin: 24px auto; padding: 0 12px; }
+    label { display: block; font-weight: bold; margin: 18px 0 6px; }
+    textarea, input[type=text] { width: 100%; box-sizing: border-box; padding: 8px; font: 14px/1.5 Arial, sans-serif; }
+    #ce { border: 1px solid #bbb; min-height: 100px; padding: 8px; border-radius: 4px; }
+    .hint { color: #666; font-size: 12px; }
+  </style>
+</head>
+<body>
+  <h1>Тестовая страница расширения</h1>
+  <p class="hint">Введите текст с ошибками (например: «Я поешл в магази н апример»), подождите ~1 с
+    и кликните по подчёркиванию.</p>
+
+  <label for="ta">textarea</label>
+  <textarea id="ta" rows="5">Я поешл в магази, н апример вот так.</textarea>
+
+  <label for="inp">input</label>
+  <input type="text" id="inp" value="Приветт мирр">
+
+  <label for="ce">contenteditable</label>
+  <div id="ce" contenteditable="true"><p>Здесьь есть ошыбка.</p><p>Вторая строка для теста <b>жирного</b> текста.</p></div>
+
+  <label for="ce2">contenteditable в стиле Confluence</label>
+  <div class="confluence-like" contenteditable="true">
+    <h2>Заголовокь</h2>
+    <p>Текс с ошибками и <a href="#">ссылкой</a> внутри.</p>
+    <ul><li>пункт одын</li><li>пункт два</li></ul>
+  </div>
+</body>
+</html>

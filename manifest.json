@@ -1,0 +1,29 @@
+{
+  "manifest_version": 3,
+  "name": "VD LanguageTool Checker",
+  "version": "1.0.0",
+  "description": "Проверка орфографии и грамматики в любом текстовом поле браузера через ваш собственный сервер LanguageTool. Открытый исходный код, без телеметрии и внешних сервисов.",
+  "author": "VD",
+  "homepage_url": "https://github.com/esavin/languagetool-extension-alt",
+  "minimum_chrome_version": "102",
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "permissions": ["storage", "scripting", "activeTab"],
+  "optional_host_permissions": ["http://*/*", "https://*/*"],
+  "background": {
+    "service_worker": "src/background.js"
+  },
+  "action": {
+    "default_title": "VD LanguageTool Checker",
+    "default_popup": "src/popup/popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "options_page": "src/options/options.html"
+}

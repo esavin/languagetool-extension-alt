@@ -1,0 +1,179 @@
+/* VD LanguageTool Checker — стили content script.
+ * Все элементы имеют префикс vdlt- и класс vdlt-root, чтобы content script
+ * мог игнорировать их при обходе DOM редактора. */
+
+.vdlt-root {
+  all: initial;
+}
+
+/* Слой подчёркиваний */
+.vdlt-root.vdlt-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 0;
+  height: 0;
+  z-index: 2147483600;
+  pointer-events: none;
+}
+
+/* Подчёркивание ошибки: видимая полоса 3px внизу + увеличенная зона клика 8px */
+.vdlt-underline {
+  position: absolute;
+  height: 8px;
+  pointer-events: auto;
+  cursor: pointer;
+  --c: #e37400;
+}
+
+.vdlt-underline::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--c);
+  transition: height 0.08s ease-out;
+}
+
+.vdlt-underline:hover::before {
+  height: 5px;
+}
+
+.vdlt-underline.vdlt-spelling {
+  --c: #d93025;
+}
+
+.vdlt-underline.vdlt-grammar {
+  --c: #e37400;
+}
+
+.vdlt-underline.vdlt-style {
+  --c: #1a73e8;
+}
+
+/* Измерительное зеркало для textarea (не видно) */
+.vdlt-root.vdlt-mirror {
+  position: absolute;
+  top: 0;
+  left: 0;
+  visibility: hidden;
+  overflow: hidden;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  pointer-events: none;
+  height: 0;
+  width: 0;
+  overflow-x: hidden;
+}
+
+/* Временная метка об ошибке соединения */
+.vdlt-err-tag {
+  position: absolute;
+  font: 12px/1.4 Arial, sans-serif;
+  color: #fff;
+  background: #d93025;
+  border-radius: 4px;
+  padding: 3px 8px;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+/* Карточка с исправлениями */
+.vdlt-root.vdlt-card {
+  position: fixed;
+  min-width: 220px;
+  max-width: 360px;
+  background: #fff;
+  color: #202124;
+  border: 1px solid #dadce0;
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
+  font: 13px/1.45 Arial, Helvetica, sans-serif;
+  z-index: 2147483647;
+}
+
+.vdlt-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 8px 6px 12px;
+  font-weight: bold;
+  color: #5f6368;
+  border-bottom: 1px solid #f1f3f4;
+}
+
+.vdlt-card-close {
+  all: unset;
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+  padding: 2px 6px;
+  border-radius: 4px;
+  color: #5f6368;
+}
+
+.vdlt-card-close:hover {
+  background: #f1f3f4;
+}
+
+.vdlt-card-msg {
+  padding: 8px 12px 2px;
+  color: #202124;
+}
+
+.vdlt-card-repls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 8px 12px;
+}
+
+.vdlt-card-repl {
+  all: unset;
+  cursor: pointer;
+  padding: 4px 10px;
+  border: 1px solid #1a73e8;
+  border-radius: 16px;
+  color: #1a73e8;
+  background: #fff;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.vdlt-card-repl:hover {
+  background: #e8f0fe;
+}
+
+.vdlt-card-foot {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 2px 12px 10px;
+}
+
+.vdlt-card-action {
+  all: unset;
+  cursor: pointer;
+  color: #5f6368;
+  text-decoration: underline;
+  font-size: 12px;
+}
+
+.vdlt-card-action:hover {
+  color: #202124;
+}
+
+.vdlt-card-more {
+  all: unset;
+  cursor: pointer;
+  display: block;
+  padding: 4px 12px 10px;
+  color: #1a73e8;
+  font-size: 12px;
+  text-decoration: underline;
+}

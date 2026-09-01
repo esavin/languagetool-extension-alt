@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <title>VD LanguageTool Checker — настройки</title>
+  <link rel="stylesheet" href="options.css">
+</head>
+<body>
+  <h1>VD LanguageTool Checker</h1>
+  <p class="hint">
+    Все тексты отправляются <b>только</b> на указанный ниже сервер LanguageTool.
+    Расширение не содержит телеметрии и не обращается к внешним сервисам.
+  </p>
+
+  <section>
+    <h2>Сервер</h2>
+    <label class="field">
+      <span>Адрес сервера LanguageTool</span>
+      <input type="text" id="server-url" placeholder="http://localhost:8081">
+    </label>
+    <div class="actions">
+      <button id="test">Проверить соединение</button>
+      <span id="test-result"></span>
+    </div>
+    <p class="hint warn" id="server-warning" hidden>
+      Внимание: сервер задан по HTTP без шифрования — весь проверяемый текст
+      (письма, сообщения, документы) будет уходить на него открытым текстом.
+      Для удалённого сервера используйте адрес с https://.
+      До явного подтверждения ниже проверка текста заблокирована.
+    </p>
+    <button id="accept-insecure" hidden>
+      Использовать этот HTTP-сервер без шифрования
+    </button>
+    <p class="hint">
+      Запустить локальный сервер: <code>java -jar languagetool-server.jar --port 8081</code>
+      или <code>docker run --rm -p 8081:8081 erdikoo/languagetool</code>.
+    </p>
+  </section>
+
+  <section>
+    <h2>Язык</h2>
+    <label class="field">
+      <span>Язык проверки</span>
+      <select id="language">
+        <option value="auto">Определять автоматически</option>
+      </select>
+    </label>
+    <label class="field">
+      <span>Родной язык (motherTongue)</span>
+      <select id="mother-tongue">
+        <option value="">— не задан —</option>
+      </select>
+    </label>
+    <label class="field">
+      <span>Предпочтительные варианты (для автоопределения)</span>
+      <input type="text" id="preferred-variants" placeholder="ru-RU,en-US">
+    </label>
+    <label class="row">
+      <input type="checkbox" id="picky">
+      <span>Строгий режим (level=picky) — больше замечаний по стилю</span>
+    </label>
+  </section>
+
+  <section>
+    <h2>Правила</h2>
+    <label class="field">
+      <span>Отключённые правила (ID через запятую)</span>
+      <input type="text" id="disabled-rules" placeholder="RU_SPACERULE,EN_QUOTES">
+    </label>
+  </section>
+
+  <section>
+    <h2>Личный словарь</h2>
+    <label class="field">
+      <span>Игнорируемые слова (по одному в строке; используется, если не заданы учётные данные ниже)</span>
+      <textarea id="ignored-words" rows="4"></textarea>
+    </label>
+    <label class="field">
+      <span>Имя пользователя (username, опционально)</span>
+      <input type="text" id="username" autocomplete="off">
+    </label>
+    <label class="field">
+      <span>API-ключ (apiKey, опционально — для серверного словаря /v2/words)</span>
+      <input type="password" id="api-key" autocomplete="off">
+    </label>
+  </section>
+
+  <section>
+    <h2>Сайты</h2>
+    <label class="field">
+      <span>Отключённые сайты (имена хостов, по одному в строке)</span>
+      <textarea id="disabled-sites" rows="3"></textarea>
+    </label>
+    <p class="hint">
+      Доступ расширения к сайтам выдаётся по подтверждению: откройте popup
+      расширения (иконка на панели) на нужном сайте и включите
+      «Проверка на этом сайте». Список выше — дополнительное мягкое отключение
+      без отзыва права доступа.
+    </p>
+  </section>
+
+  <div class="actions save">
+    <button id="save" class="primary">Сохранить</button>
+    <span id="save-result"></span>
+  </div>
+
+  <script src="options.js"></script>
+</body>
+</html>

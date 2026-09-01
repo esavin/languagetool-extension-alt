@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <title>VD LanguageTool</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <header>
+    <span class="logo">VD LanguageTool</span>
+    <a href="#" id="open-options" title="Настройки">&#9881;</a>
+  </header>
+
+  <div id="status" class="status checking">Проверка сервера…</div>
+
+  <div id="security-warning" class="warn" hidden>
+    Сервер задан по HTTP без шифрования: проверяемый текст уходит на него
+    открытым текстом. Используйте https:// в настройках.
+  </div>
+
+  <label class="row">
+    <span>Проверка на этом сайте</span>
+    <input type="checkbox" id="site-enabled">
+  </label>
+  <a href="#" id="revoke-site" hidden>Отозвать доступ Chrome к сайту</a>
+
+  <label class="row">
+    <span>Язык</span>
+    <select id="language">
+      <option value="auto">Определять автоматически</option>
+    </select>
+  </label>
+
+  <label class="row">
+    <span>Строгий режим (picky)</span>
+    <input type="checkbox" id="picky">
+  </label>
+
+  <footer>
+    <span id="server-url"></span>
+  </footer>
+
+  <script src="popup.js"></script>
+</body>
+</html>

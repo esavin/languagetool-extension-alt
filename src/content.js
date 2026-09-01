@@ -85,9 +85,17 @@
     } catch { /* расширение недоступно */ }
   }
 
+  /* Из хранилища берём те же поля, что и getSettings отдаёт контенту:
+   * адрес сервера, секреты и служебные флаги не удерживаем. */
+  function pickKnown(src) {
+    const out = {};
+    for (const k of Object.keys(DEFAULTS)) if (k in src) out[k] = src[k];
+    return out;
+  }
+
   chrome.storage.onChanged.addListener((changes, area) => {
     if (area === 'local' && changes.settings) {
-      settings = { ...DEFAULTS, ...(changes.settings.newValue || {}) };
+      settings = { ...DEFAULTS, ...pickKnown(changes.settings.newValue || {}) };
       if (siteDisabled()) {
         clearLayer();
         closeCard();

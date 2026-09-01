@@ -21,17 +21,29 @@ const DEFAULT_SETTINGS = {
   insecureServerOk: '',
 };
 
-/* Учётные данные серверного словаря хранятся отдельным ключом storage
- * (`credentials`), чтобы они не попадали в объект настроек, который
- * расходится по сообщениям и в storage.onChanged контент-скриптов. */
+/* Учётные данные серверного словаря — только в `chrome.storage.session`
+ * (ключ `credentials`): он держит значения в памяти на время сессии
+ * браузера и доступен лишь доверенным контекстам расширения —
+ * контент-скрипты (а с ними и страница) прочитать его не могут.
+ * Побочный эффект: секреты не переживают перезапуск браузера. */
 const CRED_KEYS = ['username', 'apiKey'];
 
+/* Явно запрещаем доступ к storage.session из контент-скриптов
+ * (TRUSTED_CONTEXTS — это и значение по умолчанию, фиксируем на случай
+ * его изменения). */
+try {
+  chrome.storage.session.setAccessLevel({ accessLevel: 'TRUSTED_CONTEXTS' });
+} catch { /* значение по умолчанию уже TRUSTED_CONTEXTS */ }
+
 async function getSettings() {
-  const stored = await chrome.storage.local.get(['settings', 'credentials']);
+  const [stored, creds] = await Promise.all([
+    chrome.storage.local.get('settings'),
+    chrome.storage.session.get('credentials'),
+  ]);
   return {
     ...DEFAULT_SETTINGS,
     ...(stored.settings || {}),
-    ...(stored.credentials || {}),
+    ...(creds.credentials || {}),
   };
 }
 
@@ -45,20 +57,47 @@ async function saveSettings(patch) {
   }
   const stored = { ...settings };
   for (const k of CRED_KEYS) delete stored[k];
-  await chrome.storage.local.set({ settings: stored, credentials: creds });
+  await Promise.all([
+    chrome.storage.local.set({ settings: stored }),
+    chrome.storage.session.set({ credentials: creds }),
+  ]);
   return settings;
 }
 
-/* Контент-скриптам секреты не нужны: отдаём их только страницам
- * расширения (options/popup). Сообщения из контента имеют sender.tab. */
-function stripCredentials(settings) {
-  const out = { ...settings };
-  for (const k of CRED_KEYS) delete out[k];
+/* Одноразовая миграция с предыдущих версий: секреты, лежавшие в
+ * storage.local, переносим в session и стираем с диска. */
+async function migrateCredentials() {
+  const local = await chrome.storage.local.get('credentials');
+  if (!local.credentials) return;
+  const session = await chrome.storage.session.get('credentials');
+  const old = local.credentials;
+  const cur = session.credentials || {};
+  await chrome.storage.session.set({
+    credentials: {
+      username: cur.username || old.username || '',
+      apiKey: cur.apiKey || old.apiKey || '',
+    },
+  });
+  await chrome.storage.local.remove('credentials');
+}
+
+/* Контент-скриптам нужен только этот набор настроек: без адреса сервера,
+ * секретов и служебных флагов (insecureServerOk). Полные настройки
+ * отдаются лишь страницам расширения (options/popup). Сообщения из
+ * контента имеют sender.tab. */
+const CONTENT_SETTING_KEYS = [
+  'language', 'motherTongue', 'preferredVariants', 'pickyMode',
+  'disabledRules', 'ignoredWords', 'disabledSites', 'maxTextLength',
+];
+
+function contentSettings(settings) {
+  const out = {};
+  for (const k of CONTENT_SETTING_KEYS) out[k] = settings[k];
   return out;
 }
 
 function forSender(sender, settings) {
-  return sender && sender.tab ? stripCredentials(settings) : settings;
+  return sender && sender.tab ? contentSettings(settings) : settings;
 }
 
 function isLocalHostname(hostname) {
@@ -150,6 +189,9 @@ function ensureContentScripts() {
 }
 
 ensureContentScripts();
+migrateCredentials().catch((e) => {
+  console.error('lt: credentials migration failed:', e);
+});
 
 /* Fetch из background-воркера требует host-permission на origin сервера;
  * он выдаётся пользователем в настройках («Проверить соединение»). */
@@ -300,9 +342,21 @@ function setBadge(tabId, count) {
   chrome.action.setBadgeBackgroundColor({ tabId, color: '#d93025' });
 }
 
+/* Контент-скриптам (sender.tab) разрешён только обмен, нужный для
+ * проверки текста; управление настройками и диагностические запросы —
+ * только страницам расширения. */
+const CONTENT_MESSAGES = new Set(['getSettings', 'check', 'addWord', 'badge']);
+const PAGE_MESSAGES = new Set(['getSettings', 'saveSettings', 'ping', 'languages']);
+
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   (async () => {
-    switch (msg && msg.type) {
+    const type = msg && msg.type;
+    const allowed = sender && sender.tab ? CONTENT_MESSAGES : PAGE_MESSAGES;
+    if (!allowed.has(type)) {
+      sendResponse({ error: 'FORBIDDEN' });
+      return;
+    }
+    switch (type) {
       case 'getSettings':
         sendResponse(forSender(sender, await getSettings()));
         break;

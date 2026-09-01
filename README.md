@@ -120,10 +120,15 @@ Key design decisions (important for a security audit):
    address from the settings. The content script has no network access.
 3. **Settings are stored** in `chrome.storage.local` (server, language,
    dictionary, disabled sites/rules). The username/apiKey credentials are
-   optional, needed only for the server-side dictionary, and are stored
-   under a separate `credentials` key; they are never passed to content
-   scripts (the `getSettings`/`saveSettings` messages return them only to
-   extension pages).
+   optional, needed only for the server-side dictionary; they are kept in
+   `chrome.storage.session` — in-memory, explicitly restricted to trusted
+   extension contexts (`TRUSTED_CONTEXTS`), so content scripts cannot read
+   them at all — and are never passed to content scripts via messages
+   (the `getSettings`/`saveSettings` messages return them only to
+   extension pages). Since session storage is cleared when the browser
+   exits, credentials must be re-entered after a browser restart; on
+   upgrade, credentials previously stored on disk are migrated to session
+   storage and wiped from disk.
 4. **Extension permissions:**
    - `storage` — settings;
    - `scripting` + `activeTab` — dynamic content-script registration and

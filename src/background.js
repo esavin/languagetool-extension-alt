@@ -107,21 +107,46 @@ function apiUrl(settings, path) {
 
 const CONTENT_SCRIPT_ID = 'vdlt-main';
 
-async function ensureContentScripts() {
-  try {
-    const registered = await chrome.scripting.getRegisteredContentScripts();
-    if (registered.some((s) => s.id === CONTENT_SCRIPT_ID)) return;
-    await chrome.scripting.registerContentScripts([{
-      id: CONTENT_SCRIPT_ID,
-      js: ['src/content.js'],
-      css: ['src/content.css'],
-      matches: ['http://*/*', 'https://*/*'],
-      runAt: 'document_idle',
-      allFrames: true,
-      matchOriginAsFallback: ['about:blank', 'about:srcdoc'],
-      persistAcrossSessions: true,
-    }]);
-  } catch { /* уже зарегистрирован или API недоступен */ }
+/* Общий promise: top-level вызов и onInstalled стартуют одновременно после
+ * перезагрузки расширения — без мемоизации оба видят пустой список
+ * регистрации и второй падает с «Duplicate id 'vdlt-main'». */
+let contentScriptsEnsured = null;
+
+function ensureContentScripts() {
+  if (!contentScriptsEnsured) {
+    contentScriptsEnsured = (async () => {
+      const registered = await chrome.scripting.getRegisteredContentScripts();
+      if (registered.some((s) => s.id === CONTENT_SCRIPT_ID)) return;
+      try {
+        await chrome.scripting.registerContentScripts([{
+          id: CONTENT_SCRIPT_ID,
+          js: ['src/content.js'],
+          css: ['src/content.css'],
+          matches: ['http://*/*', 'https://*/*'],
+          runAt: 'document_idle',
+          allFrames: true,
+          matchOriginAsFallback: true,
+          persistAcrossSessions: true,
+        }]);
+      } catch {
+        // Chrome < 105 не знает matchOriginAsFallback — без него about:-фреймы
+        // с унаследованным origin не проверяются, но основная регистрация жива
+        await chrome.scripting.registerContentScripts([{
+          id: CONTENT_SCRIPT_ID,
+          js: ['src/content.js'],
+          css: ['src/content.css'],
+          matches: ['http://*/*', 'https://*/*'],
+          runAt: 'document_idle',
+          allFrames: true,
+          persistAcrossSessions: true,
+        }]);
+      }
+    })().catch((e) => {
+      contentScriptsEnsured = null; // следующий event сможет повторить попытку
+      console.error('vdlt: registerContentScripts failed:', e);
+    });
+  }
+  return contentScriptsEnsured;
 }
 
 ensureContentScripts();
@@ -221,6 +246,7 @@ async function fetchLanguages() {
   const settings = await getSettings();
   const server = normalizeServerUrl(settings.serverUrl);
   if (!server) return [];
+  if (!(await serverAccessOk(server))) return [];
   try {
     const resp = await fetch(server + '/v2/languages', { redirect: 'error' });
     if (!resp.ok) return [];

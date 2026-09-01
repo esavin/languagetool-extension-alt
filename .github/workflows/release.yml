@@ -1,0 +1,48 @@
+name: Release
+
+# Сборка распространяемого архива расширения и публикация релиза.
+# Срабатывает при пуше тега вида v1.2.3, где 1.2.3 должен совпадать
+# с "version" в manifest.json (проверяется отдельным шагом).
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write # право создавать релиз и загружать файлы
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Syntax check
+        run: |
+          set -e
+          for f in $(find src -name '*.js'); do
+            echo "node --check $f"
+            node --check "$f"
+          done
+
+      - name: Check tag matches manifest version
+        run: |
+          VERSION=$(python3 -c "import json; print(json.load(open('manifest.json'))['version'])")
+          TAG="${GITHUB_REF_NAME#v}"
+          if [ "$VERSION" != "$TAG" ]; then
+            echo "::error::Tag $TAG does not match manifest.json version $VERSION"
+            exit 1
+          fi
+          echo "OK: tag v$TAG == manifest.json version"
+
+      - name: Pack extension
+        run: tools/pack.sh
+
+      - name: Create release and upload zip
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*.zip
+          generate_release_notes: true
+          body: |-
+            Установка: скачайте zip-архив, распакуйте его и загрузите каталог
+            в `chrome://extensions` (режим разработчика → Load unpacked).

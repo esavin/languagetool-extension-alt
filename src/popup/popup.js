@@ -1,4 +1,4 @@
-/* VD LanguageTool Checker — popup */
+/* LanguageTool Checker — popup */
 
 const $ = (id) => document.getElementById(id);
 

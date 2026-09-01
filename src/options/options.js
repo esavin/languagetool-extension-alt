@@ -1,4 +1,4 @@
-/* VD LanguageTool Checker — страница настроек */
+/* LanguageTool Checker — страница настроек */
 
 const $ = (id) => document.getElementById(id);
 let settings = null;

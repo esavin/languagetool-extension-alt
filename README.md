@@ -1,4 +1,4 @@
-# VD LanguageTool Checker — a Google Chrome extension
+# LanguageTool Checker — a Google Chrome extension
 
 An open-source replacement for the proprietary LanguageTool browser plugin.
 It checks spelling, grammar and style in any editable text on a page: plain

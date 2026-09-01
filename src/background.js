@@ -1,10 +1,10 @@
-/* VD LanguageTool Checker — background service worker.
+/* LanguageTool Checker — background service worker.
  * Единственная точка сетевого взаимодействия: все запросы к серверу
  * LanguageTool уходят отсюда (host-permission на origin сервера,
  * выданный пользователем в настройках, снимает CORS).
  * Никакой телеметрии и обращения к внешним сервисам нет. */
 
-const EXT_USER_AGENT = 'vd-languagetool-chrome/1.0.0';
+const EXT_USER_AGENT = 'languagetool-chrome/1.0.0';
 
 const DEFAULT_SETTINGS = {
   serverUrl: 'http://localhost:8081',
@@ -105,11 +105,11 @@ function apiUrl(settings, path) {
 /* host_permissions расширение не читает ничего ни на одном сайте.     */
 /* ------------------------------------------------------------------ */
 
-const CONTENT_SCRIPT_ID = 'vdlt-main';
+const CONTENT_SCRIPT_ID = 'lt-main';
 
 /* Общий promise: top-level вызов и onInstalled стартуют одновременно после
  * перезагрузки расширения — без мемоизации оба видят пустой список
- * регистрации и второй падает с «Duplicate id 'vdlt-main'». */
+ * регистрации и второй падает с «Duplicate id 'lt-main'». */
 let contentScriptsEnsured = null;
 
 function ensureContentScripts() {
@@ -143,7 +143,7 @@ function ensureContentScripts() {
       }
     })().catch((e) => {
       contentScriptsEnsured = null; // следующий event сможет повторить попытку
-      console.error('vdlt: registerContentScripts failed:', e);
+      console.error('lt: registerContentScripts failed:', e);
     });
   }
   return contentScriptsEnsured;

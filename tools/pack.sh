@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 # Сборка распространяемого архива расширения (для аудита/установки).
-# Результат: dist/vd-languagetool-extension-<версия>.zip
+# Результат: dist/languagetool-extension-<версия>.zip
 
 set -eu
 cd "$(dirname "$0")/.."
 
 VERSION=$(python3 -c "import json; print(json.load(open('manifest.json'))['version'])")
-OUT="dist/vd-languagetool-extension-$VERSION.zip"
+OUT="dist/languagetool-extension-$VERSION.zip"
 
 mkdir -p dist
 rm -f "$OUT"

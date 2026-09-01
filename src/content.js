@@ -1,4 +1,4 @@
-/* VD LanguageTool Checker — content script.
+/* LanguageTool Checker — content script.
  *
  * Логика:
  *  1. Находим редактируемые элементы (textarea, input, contenteditable).
@@ -14,8 +14,38 @@
 (() => {
   'use strict';
 
-  if (window.__vdltInjected) return;
-  window.__vdltInjected = true;
+  if (window.__ltInjected) return;
+  window.__ltInjected = true;
+
+  /* После удаления/переустановки расширения «осиротевший» content script
+   * продолжает исполняться в открытых вкладках, но теряет доступ к
+   * chrome.* («Extension context invalidated»). Обнаружив это, скрипт
+   * полностью выключается: снимает слушатели, убирает оверлеи и
+   * возвращает штатную проверку орфографии. */
+  const listeners = new AbortController();
+  let contextDead = false;
+
+  function contextAlive() {
+    if (contextDead) return false;
+    if (chrome.runtime && chrome.runtime.id) return true;
+    contextDead = true;
+    listeners.abort();
+    clearLayer();
+    closeCard();
+    restoreNativeSpellcheckAll();
+    return false;
+  }
+
+  /* chrome.runtime.sendMessage в осиротевшем контексте бросает
+   * синхронно, поэтому одного .catch() недостаточно. */
+  async function sendMsg(msg) {
+    if (!contextAlive()) return null;
+    try {
+      return await chrome.runtime.sendMessage(msg);
+    } catch {
+      return null;
+    }
+  }
 
   const DEBOUNCE_MS = 600;
   const MIN_TEXT_LEN = 3;
@@ -50,7 +80,7 @@
 
   async function loadSettings() {
     try {
-      const resp = await chrome.runtime.sendMessage({ type: 'getSettings' });
+      const resp = await sendMsg({ type: 'getSettings' });
       if (resp && !resp.error) settings = { ...DEFAULTS, ...resp };
     } catch { /* расширение недоступно */ }
   }
@@ -109,14 +139,14 @@
     }
   }
 
-  window.addEventListener('pagehide', restoreNativeSpellcheckAll);
+  window.addEventListener('pagehide', restoreNativeSpellcheckAll, { signal: listeners.signal });
 
   /* ------------------------------------------------------------------ */
   /* Определение редактируемых элементов                                 */
   /* ------------------------------------------------------------------ */
 
   function isOurNode(node) {
-    return !!(node && (node.closest && node.closest('.vdlt-root, .vdlt-card')));
+    return !!(node && (node.closest && node.closest('.lt-root, .lt-card')));
   }
 
   function editableRoot(el) {
@@ -215,7 +245,7 @@
   function getLayer() {
     if (!layer || !layer.isConnected) {
       layer = document.createElement('div');
-      layer.className = 'vdlt-root vdlt-layer';
+      layer.className = 'lt-root lt-layer';
       document.documentElement.appendChild(layer);
     }
     return layer;
@@ -227,9 +257,9 @@
 
   function classForMatch(match) {
     const issue = match.rule && match.rule.issueType;
-    if (issue === 'misspelling') return 'vdlt-spelling';
-    if (issue === 'grammar' || issue === 'typographical' || issue === 'duplication') return 'vdlt-grammar';
-    return 'vdlt-style'; // style, inconsistencies, punctuation и прочее
+    if (issue === 'misspelling') return 'lt-spelling';
+    if (issue === 'grammar' || issue === 'typographical' || issue === 'duplication') return 'lt-grammar';
+    return 'lt-style'; // style, inconsistencies, punctuation и прочее
   }
 
   /* Подчёркивания для contenteditable: rect'ы DOM Range -> div'ы */
@@ -238,7 +268,7 @@
       for (const rect of entry.range.getClientRects()) {
         if (rect.width < 1 || rect.height < 1) continue;
         const u = document.createElement('div');
-        u.className = 'vdlt-underline ' + classForMatch(entry.match);
+        u.className = 'lt-underline ' + classForMatch(entry.match);
         u.title = 'LanguageTool: ' + (entry.match.shortMessage || 'исправить ошибку');
         positionUnderline(u, rect);
         u.addEventListener('mousedown', (ev) => {
@@ -273,7 +303,7 @@
   function getMirror() {
     if (!mirror || !mirror.isConnected) {
       mirror = document.createElement('div');
-      mirror.className = 'vdlt-root vdlt-mirror';
+      mirror.className = 'lt-root lt-mirror';
       document.documentElement.appendChild(mirror);
     }
     return mirror;
@@ -317,7 +347,7 @@
       for (const rect of mark.getClientRects()) {
         if (rect.width < 1) continue;
         const u = document.createElement('div');
-        u.className = 'vdlt-underline ' + classForMatch(entry.match);
+        u.className = 'lt-underline ' + classForMatch(entry.match);
         u.title = 'LanguageTool: ' + (entry.match.shortMessage || 'исправить ошибку');
         u.style.left = (elRect.left + rect.left - mirrorRect.left - scrollLeft) + 'px';
         u.style.top = (elRect.top + rect.top - mirrorRect.top - scrollTop + rect.height - 8) + 'px';
@@ -344,8 +374,8 @@
     });
   }
 
-  window.addEventListener('scroll', scheduleReposition, { passive: true, capture: true });
-  window.addEventListener('resize', scheduleReposition, { passive: true });
+  window.addEventListener('scroll', scheduleReposition, { passive: true, capture: true, signal: listeners.signal });
+  window.addEventListener('resize', scheduleReposition, { passive: true, signal: listeners.signal });
 
   /* ------------------------------------------------------------------ */
   /* Проверка текста                                                     */
@@ -373,7 +403,7 @@
   }
 
   async function runCheck(el) {
-    if (!el.isConnected) return;
+    if (!el.isConnected || !contextAlive()) return;
     const s = st(el);
     suppressNativeSpellcheck(el);
     reassertSuppression(el);
@@ -400,7 +430,7 @@
       disabledRules: [...sessionIgnoredRules].join(','),
       textSessionId: s.textSessionId,
     };
-    const resp = await chrome.runtime.sendMessage({ type: 'check', text, params }).catch(() => null);
+    const resp = await sendMsg({ type: 'check', text, params });
     if (!resp || resp.error || seq !== s.seq || !el.isConnected) {
       if (resp && resp.error && seq === s.seq) {
         s.matches = [];
@@ -485,7 +515,7 @@
     const rect = el.getBoundingClientRect();
     if (!rect.width) return;
     const tag = document.createElement('div');
-    tag.className = 'vdlt-err-tag';
+    tag.className = 'lt-err-tag';
     const errText = {
       NETWORK: 'LanguageTool: сервер недоступен',
       SERVER_NOT_CONFIGURED: 'LanguageTool: сервер не настроен',
@@ -501,7 +531,7 @@
 
   function updateBadge(el, count) {
     if (el !== document.activeElement || !document.hasFocus()) return;
-    chrome.runtime.sendMessage({ type: 'badge', count }).catch(() => {});
+    sendMsg({ type: 'badge', count });
   }
 
   /* ------------------------------------------------------------------ */
@@ -531,7 +561,7 @@
     const { match } = entry;
 
     card = document.createElement('div');
-    card.className = 'vdlt-root vdlt-card';
+    card.className = 'lt-root lt-card';
 
     const cat = match.rule && match.rule.category && match.rule.category.name;
     const issueRu = {
@@ -545,27 +575,27 @@
     }[match.rule && match.rule.issueType] || (cat || 'Замечание');
 
     const head = document.createElement('div');
-    head.className = 'vdlt-card-head';
+    head.className = 'lt-card-head';
     head.textContent = issueRu;
     const closeBtn = document.createElement('button');
-    closeBtn.className = 'vdlt-card-close';
+    closeBtn.className = 'lt-card-close';
     closeBtn.textContent = '×';
     closeBtn.addEventListener('click', closeCard);
     head.appendChild(closeBtn);
     card.appendChild(head);
 
     const msg = document.createElement('div');
-    msg.className = 'vdlt-card-msg';
+    msg.className = 'lt-card-msg';
     msg.textContent = match.shortMessage || match.message || '';
     card.appendChild(msg);
 
     const repls = (match.replacements || []).slice(0, 8);
     if (repls.length) {
       const list = document.createElement('div');
-      list.className = 'vdlt-card-repls';
+      list.className = 'lt-card-repls';
       for (const r of repls) {
         const btn = document.createElement('button');
-        btn.className = 'vdlt-card-repl';
+        btn.className = 'lt-card-repl';
         btn.textContent = r.value;
         btn.title = r.shortDescription || '';
         btn.addEventListener('mousedown', (ev) => ev.preventDefault());
@@ -576,10 +606,10 @@
     }
 
     const foot = document.createElement('div');
-    foot.className = 'vdlt-card-foot';
+    foot.className = 'lt-card-foot';
     if (match.rule && match.rule.id) {
       const ig = document.createElement('button');
-      ig.className = 'vdlt-card-action';
+      ig.className = 'lt-card-action';
       ig.textContent = 'Отключить правило';
       ig.title = 'Не показывать это правило на этой странице';
       ig.addEventListener('click', () => {
@@ -594,12 +624,12 @@
       match.context.offset, match.context.offset + match.length) : null;
     if (isSpellingMatch(match) && ctx) {
       const dic = document.createElement('button');
-      dic.className = 'vdlt-card-action';
+      dic.className = 'lt-card-action';
       dic.textContent = 'В словарь';
       dic.title = 'Добавить «' + ctx + '» в личный словарь';
       dic.addEventListener('click', async () => {
         const el = currentEntries.el;
-        await chrome.runtime.sendMessage({ type: 'addWord', word: ctx }).catch(() => {});
+        await sendMsg({ type: 'addWord', word: ctx });
         await loadSettings();
         closeCard();
         if (el) scheduleCheck(el, true);
@@ -612,7 +642,7 @@
       match.rule && match.rule.urls && match.rule.urls[0] && match.rule.urls[0].value);
     if (moreUrl) {
       const more = document.createElement('a');
-      more.className = 'vdlt-card-more';
+      more.className = 'lt-card-more';
       more.href = moreUrl;
       more.target = '_blank';
       more.rel = 'noopener noreferrer';
@@ -633,12 +663,12 @@
   }
 
   document.addEventListener('mousedown', (ev) => {
-    if (card && !ev.target.closest('.vdlt-root')) closeCard();
-  }, true);
+    if (card && !ev.target.closest('.lt-root')) closeCard();
+  }, { capture: true, signal: listeners.signal });
 
   document.addEventListener('keydown', (ev) => {
     if (ev.key === 'Escape' && card) closeCard();
-  }, true);
+  }, { capture: true, signal: listeners.signal });
 
   /* ------------------------------------------------------------------ */
   /* Применение исправления                                              */
@@ -713,20 +743,21 @@
   /* ------------------------------------------------------------------ */
 
   document.addEventListener('focusin', () => {
+    if (!contextAlive()) return;
     const el = findActiveEditable();
     if (el && !siteDisabled()) {
       suppressNativeSpellcheck(el); // сразу убираем двойную подсветку при фокусе
       scheduleCheck(el, false);
     }
-  });
+  }, { signal: listeners.signal });
 
   document.addEventListener('input', (ev) => {
-    if (ev.isComposing) return;
+    if (!contextAlive() || ev.isComposing) return;
     const el = editableRoot(ev.target);
     if (!el) return;
     closeCard();
     scheduleCheck(el, false);
-  }, true);
+  }, { capture: true, signal: listeners.signal });
 
   /* ------------------------------------------------------------------ */
 

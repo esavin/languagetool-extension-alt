@@ -1,13 +1,13 @@
-/* VD LanguageTool Checker — стили content script.
- * Все элементы имеют префикс vdlt- и класс vdlt-root, чтобы content script
+/* LanguageTool Checker — стили content script.
+ * Все элементы имеют префикс lt- и класс lt-root, чтобы content script
  * мог игнорировать их при обходе DOM редактора. */
 
-.vdlt-root {
+.lt-root {
   all: initial;
 }
 
 /* Слой подчёркиваний */
-.vdlt-root.vdlt-layer {
+.lt-root.lt-layer {
   position: absolute;
   top: 0;
   left: 0;
@@ -18,7 +18,7 @@
 }
 
 /* Подчёркивание ошибки: видимая полоса 3px внизу + увеличенная зона клика 8px */
-.vdlt-underline {
+.lt-underline {
   position: absolute;
   height: 8px;
   pointer-events: auto;
@@ -26,7 +26,7 @@
   --c: #e37400;
 }
 
-.vdlt-underline::before {
+.lt-underline::before {
   content: '';
   position: absolute;
   left: 0;
@@ -38,24 +38,24 @@
   transition: height 0.08s ease-out;
 }
 
-.vdlt-underline:hover::before {
+.lt-underline:hover::before {
   height: 5px;
 }
 
-.vdlt-underline.vdlt-spelling {
+.lt-underline.lt-spelling {
   --c: #d93025;
 }
 
-.vdlt-underline.vdlt-grammar {
+.lt-underline.lt-grammar {
   --c: #e37400;
 }
 
-.vdlt-underline.vdlt-style {
+.lt-underline.lt-style {
   --c: #1a73e8;
 }
 
 /* Измерительное зеркало для textarea (не видно) */
-.vdlt-root.vdlt-mirror {
+.lt-root.lt-mirror {
   position: absolute;
   top: 0;
   left: 0;
@@ -70,7 +70,7 @@
 }
 
 /* Временная метка об ошибке соединения */
-.vdlt-err-tag {
+.lt-err-tag {
   position: absolute;
   font: 12px/1.4 Arial, sans-serif;
   color: #fff;
@@ -82,7 +82,7 @@
 }
 
 /* Карточка с исправлениями */
-.vdlt-root.vdlt-card {
+.lt-root.lt-card {
   position: fixed;
   min-width: 220px;
   max-width: 360px;
@@ -95,7 +95,7 @@
   z-index: 2147483647;
 }
 
-.vdlt-card-head {
+.lt-card-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -105,7 +105,7 @@
   border-bottom: 1px solid #f1f3f4;
 }
 
-.vdlt-card-close {
+.lt-card-close {
   all: unset;
   cursor: pointer;
   font-size: 16px;
@@ -115,23 +115,23 @@
   color: #5f6368;
 }
 
-.vdlt-card-close:hover {
+.lt-card-close:hover {
   background: #f1f3f4;
 }
 
-.vdlt-card-msg {
+.lt-card-msg {
   padding: 8px 12px 2px;
   color: #202124;
 }
 
-.vdlt-card-repls {
+.lt-card-repls {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
   padding: 8px 12px;
 }
 
-.vdlt-card-repl {
+.lt-card-repl {
   all: unset;
   cursor: pointer;
   padding: 4px 10px;
@@ -145,18 +145,18 @@
   white-space: nowrap;
 }
 
-.vdlt-card-repl:hover {
+.lt-card-repl:hover {
   background: #e8f0fe;
 }
 
-.vdlt-card-foot {
+.lt-card-foot {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
   padding: 2px 12px 10px;
 }
 
-.vdlt-card-action {
+.lt-card-action {
   all: unset;
   cursor: pointer;
   color: #5f6368;
@@ -164,11 +164,11 @@
   font-size: 12px;
 }
 
-.vdlt-card-action:hover {
+.lt-card-action:hover {
   color: #202124;
 }
 
-.vdlt-card-more {
+.lt-card-more {
   all: unset;
   cursor: pointer;
   display: block;

@@ -4,7 +4,7 @@
  * выданный пользователем в настройках, снимает CORS).
  * Никакой телеметрии и обращения к внешним сервисам нет. */
 
-const EXT_USER_AGENT = 'languagetool-chrome/1.0.0';
+const EXT_USER_AGENT = 'languagetool-chrome/1.0.1';
 
 const DEFAULT_SETTINGS = {
   serverUrl: 'http://localhost:8081',
@@ -83,8 +83,7 @@ async function migrateCredentials() {
 
 /* Контент-скриптам нужен только этот набор настроек: без адреса сервера,
  * секретов и служебных флагов (insecureServerOk). Полные настройки
- * отдаются лишь страницам расширения (options/popup). Сообщения из
- * контента имеют sender.tab. */
+ * отдаются лишь страницам расширения (options/popup). */
 const CONTENT_SETTING_KEYS = [
   'language', 'motherTongue', 'preferredVariants', 'pickyMode',
   'disabledRules', 'ignoredWords', 'disabledSites', 'maxTextLength',
@@ -96,8 +95,18 @@ function contentSettings(settings) {
   return out;
 }
 
+/* Страницы расширения определяем по sender.origin, а не по sender.tab:
+ * страница настроек, открытая options_page во вкладке, тоже имеет
+ * sender.tab (как контент-скрипт), из-за чего «Проверить соединение»
+ * отвергался с FORBIDDEN. */
+const EXT_ORIGIN = new URL(chrome.runtime.getURL('')).origin;
+
+function isExtensionPage(sender) {
+  return !!sender && sender.origin === EXT_ORIGIN;
+}
+
 function forSender(sender, settings) {
-  return sender && sender.tab ? contentSettings(settings) : settings;
+  return isExtensionPage(sender) ? settings : contentSettings(settings);
 }
 
 function isLocalHostname(hostname) {
@@ -342,16 +351,16 @@ function setBadge(tabId, count) {
   chrome.action.setBadgeBackgroundColor({ tabId, color: '#d93025' });
 }
 
-/* Контент-скриптам (sender.tab) разрешён только обмен, нужный для
- * проверки текста; управление настройками и диагностические запросы —
- * только страницам расширения. */
+/* Контент-скриптам разрешён только обмен, нужный для проверки текста;
+ * управление настройками и диагностические запросы — только страницам
+ * расширения. */
 const CONTENT_MESSAGES = new Set(['getSettings', 'check', 'addWord', 'badge']);
 const PAGE_MESSAGES = new Set(['getSettings', 'saveSettings', 'ping', 'languages']);
 
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   (async () => {
     const type = msg && msg.type;
-    const allowed = sender && sender.tab ? CONTENT_MESSAGES : PAGE_MESSAGES;
+    const allowed = isExtensionPage(sender) ? PAGE_MESSAGES : CONTENT_MESSAGES;
     if (!allowed.has(type)) {
       sendResponse({ error: 'FORBIDDEN' });
       return;
